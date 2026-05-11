@@ -1,13 +1,11 @@
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+import bcrypt
 
 from app.exceptions.custom import MailYaRegistradoException
 from app.models.role import Role
 from app.models.usuario import Usuario
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.security.jwt import generate_token
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def register(request: RegisterRequest, db: Session) -> AuthResponse:
@@ -19,7 +17,7 @@ def register(request: RegisterRequest, db: Session) -> AuthResponse:
         nombre=request.nombre,
         apellido=request.apellido,
         mail=request.mail,
-        contrasena=pwd_context.hash(request.password),
+        contrasena=bcrypt.hashpw(request.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
         role=Role.USER,
     )
     db.add(usuario)
@@ -35,7 +33,7 @@ def register(request: RegisterRequest, db: Session) -> AuthResponse:
 
 def authenticate(request: LoginRequest, db: Session) -> AuthResponse:
     usuario = db.query(Usuario).filter(Usuario.mail == request.mail).first()
-    if not usuario or not pwd_context.verify(request.password, usuario.contrasena):
+    if not usuario or not bcrypt.checkpw(request.password.encode("utf-8"), usuario.contrasena.encode("utf-8")):
         raise ValueError("Credenciales inválidas")
 
     roles = {f"ROLE_{usuario.role.value}"}
