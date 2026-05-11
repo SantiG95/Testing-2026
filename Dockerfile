@@ -1,11 +1,12 @@
-# Etapa 1: Construcción
-FROM eclipse-temurin:21-jdk AS build
-COPY . /app
-WORKDIR /app
-RUN ./mvnw clean package -DskipTests
+FROM python:3.13-slim
 
-# Etapa 2: Ejecución
-FROM eclipse-temurin:21-jre
-COPY --from=build /app/target/e-commerce3-0.0.1-SNAPSHOT.jar /app.jar
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
